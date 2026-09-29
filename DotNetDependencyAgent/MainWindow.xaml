@@ -19,7 +19,7 @@
 
         <Border Grid.Row="1" BorderBrush="#D7D7D7" BorderThickness="1" CornerRadius="8" Padding="14">
             <Grid>
-                <Grid.RowDefinitions><RowDefinition/><RowDefinition/><RowDefinition/></Grid.RowDefinitions>
+                <Grid.RowDefinitions><RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/></Grid.RowDefinitions>
                 <Grid.ColumnDefinitions><ColumnDefinition Width="150"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
 
                 <TextBlock Grid.Row="0" Grid.Column="0" VerticalAlignment="Center" Text="Project source" FontWeight="SemiBold"/>
@@ -32,11 +32,12 @@
                 <TextBox x:Name="InputTextBox" Grid.Row="1" Grid.Column="1" Margin="0,12,8,0" Height="30" VerticalContentAlignment="Center"/>
                 <Button x:Name="BrowseButton" Grid.Row="1" Grid.Column="2" Margin="0,12,0,0" Padding="16,4" Content="Browse..." Click="Browse_Click" Visibility="Collapsed"/>
 
-                <TextBlock Grid.Row="2" Grid.Column="0" VerticalAlignment="Center" Text="Gemini" FontWeight="SemiBold" Margin="0,12,0,0"/>
-                <StackPanel Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="2" Orientation="Horizontal" Margin="0,12,0,0">
-                   
-                    <CheckBox x:Name="RunAiCheckBox" Margin="14,6,0,0" IsChecked="True" Content="Run AI analysis"/>
-                </StackPanel>
+                <TextBlock Grid.Row="2" Grid.Column="0" VerticalAlignment="Center" Text="Gemini model" FontWeight="SemiBold" Margin="0,12,0,0"/>
+                <ComboBox x:Name="GeminiModelComboBox" Grid.Row="2" Grid.Column="1" Margin="0,12,8,0" Height="30" MinWidth="260" HorizontalAlignment="Left" VerticalContentAlignment="Center"/>
+                <TextBlock Grid.Row="2" Grid.Column="2" Margin="8,12,0,0" VerticalAlignment="Center" Foreground="DimGray" Text="Selected model generates the AI report"/>
+
+                <TextBlock Grid.Row="3" Grid.Column="0" VerticalAlignment="Center" Text="AI report" FontWeight="SemiBold" Margin="0,12,0,0"/>
+                <CheckBox x:Name="RunAiCheckBox" Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="2" Margin="0,12,0,0" VerticalAlignment="Center" IsChecked="True" Content="Run Gemini AI analysis"/>
             </Grid>
         </Border>
 

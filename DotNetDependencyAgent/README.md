@@ -39,3 +39,37 @@ Report order: Executive Summary, Key Metrics, Confirmed Project Relationships, U
 ## Project-wise AI dependency report
 
 The AI Impact Report now renders every discovered `.csproj` in a separate section. Each project has its own Upstream, Downstream, Bidirectional/Possible dependencies, Entry Points, Dependency Flow, Risks, Recommendations, and Notes. Confirmed `ProjectReference` and reverse-reference relationships are injected from static analysis so a project section is still present even if the AI response omits it. Package/source heuristics are grouped only under their owning project.
+
+
+## Project Architecture in Gemini report
+The AI report now includes a repository-level **Project Architecture** section with architecture style, overview, components, confirmed/possible connections, architecture flow, and evidence notes. Every discovered `.csproj` is deterministically added as a Confirmed architecture component, and confirmed downstream `ProjectReference` relationships are deterministically added as `Project -> Project` architecture connections even if Gemini omits them. Gemini may enrich the architecture with API/database/queue/cache/storage/external components only when the static dependency report contains supporting evidence.
+
+
+## Gemini configuration
+Gemini settings are loaded from `appsettings.json`; the API key is no longer hard-coded in `MainWindow.xaml.cs`.
+
+```json
+{
+  "Gemini": {
+    "ApiKey": "PASTE_YOUR_GEMINI_API_KEY_HERE",
+    "Model": "gemini-3.5-flash"
+  }
+}
+```
+
+For deployments, `GEMINI_API_KEY` and `GEMINI_MODEL` environment variables can override the file values. Do not commit a real API key to source control.
+
+
+## Gemini model dropdown
+The desktop UI now provides a Gemini model dropdown. `Gemini:Model` in `appsettings.json` controls the default selection only. The model selected on screen is passed to `GeminiService` for that analysis run and is written to the activity log. The API key continues to come from `appsettings.json` or the `GEMINI_API_KEY` environment variable.
+
+## Visual project architecture diagram
+
+AI reports now include a dynamic visual architecture diagram generated from the discovered projects, entry points, ProjectReference relationships, and evidence-backed external dependencies.
+
+- HTML report: designed SVG blocks, arrows, relationship labels, confidence styling, and legend.
+- WPF AI Report tab: block-based architecture preview.
+- Markdown report: Mermaid architecture diagram source.
+- Output folder: `project_architecture_diagram.svg` for reuse in documentation or presentations.
+- Solid arrows represent confirmed/high-confidence relationships; dashed arrows represent possible/low-confidence relationships.
+- The diagram uses static scan evidence plus Gemini's evidence-backed architecture model and does not intentionally invent missing components.

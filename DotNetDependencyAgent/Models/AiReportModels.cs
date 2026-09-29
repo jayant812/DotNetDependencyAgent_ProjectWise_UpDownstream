@@ -7,9 +7,38 @@ public sealed class AiArchitectureReport
     [JsonPropertyName("report_title")] public string ReportTitle { get; set; } = ".NET Dependency Impact Analysis";
     [JsonPropertyName("executive_summary")] public string ExecutiveSummary { get; set; } = "";
     [JsonPropertyName("overall_assessment")] public string OverallAssessment { get; set; } = "";
+    [JsonPropertyName("project_architecture")] public AiProjectArchitecture ProjectArchitecture { get; set; } = new();
     [JsonPropertyName("projects")] public List<AiProjectReport> Projects { get; set; } = [];
     [JsonPropertyName("global_recommendations")] public List<AiRecommendationItem> GlobalRecommendations { get; set; } = [];
     [JsonPropertyName("analysis_notes")] public List<string> AnalysisNotes { get; set; } = [];
+}
+
+public sealed class AiProjectArchitecture
+{
+    [JsonPropertyName("architecture_style")] public string ArchitectureStyle { get; set; } = "";
+    [JsonPropertyName("overview")] public string Overview { get; set; } = "";
+    [JsonPropertyName("components")] public List<AiArchitectureComponent> Components { get; set; } = [];
+    [JsonPropertyName("connections")] public List<AiArchitectureConnection> Connections { get; set; } = [];
+    [JsonPropertyName("flow_summary")] public List<string> FlowSummary { get; set; } = [];
+    [JsonPropertyName("notes")] public List<string> Notes { get; set; } = [];
+}
+
+public sealed class AiArchitectureComponent
+{
+    [JsonPropertyName("name")] public string Name { get; set; } = "";
+    [JsonPropertyName("type")] public string Type { get; set; } = "";
+    [JsonPropertyName("responsibility")] public string Responsibility { get; set; } = "";
+    [JsonPropertyName("evidence")] public string Evidence { get; set; } = "";
+    [JsonPropertyName("confidence")] public string Confidence { get; set; } = "";
+}
+
+public sealed class AiArchitectureConnection
+{
+    [JsonPropertyName("from")] public string From { get; set; } = "";
+    [JsonPropertyName("to")] public string To { get; set; } = "";
+    [JsonPropertyName("relationship")] public string Relationship { get; set; } = "";
+    [JsonPropertyName("confidence")] public string Confidence { get; set; } = "";
+    [JsonPropertyName("evidence")] public string Evidence { get; set; } = "";
 }
 
 public sealed class AiProjectReport

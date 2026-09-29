@@ -38,6 +38,45 @@ public static class AiReportFormatter
         }
         sb.AppendLine();
 
+        sb.AppendLine("# Project Architecture");
+        sb.AppendLine($"**Architecture Style:** {Safe(ai.ProjectArchitecture.ArchitectureStyle)}");
+        sb.AppendLine();
+        sb.AppendLine(Safe(ai.ProjectArchitecture.Overview));
+        sb.AppendLine();
+        sb.AppendLine("## Architecture Diagram");
+        sb.AppendLine("```mermaid");
+        sb.Append(ArchitectureDiagramBuilder.BuildMermaid(ai, report));
+        sb.AppendLine("```");
+        sb.AppendLine();
+        sb.AppendLine("## Architecture Components");
+        if (ai.ProjectArchitecture.Components.Count == 0) sb.AppendLine("No architecture components were identified from the available evidence.");
+        else
+        {
+            sb.AppendLine("| Component | Type | Responsibility | Confidence | Evidence |");
+            sb.AppendLine("|---|---|---|---|---|");
+            foreach (var x in ai.ProjectArchitecture.Components)
+                sb.AppendLine($"| {Cell(x.Name)} | {Cell(x.Type)} | {Cell(x.Responsibility)} | {Cell(x.Confidence)} | {Cell(x.Evidence)} |");
+        }
+        sb.AppendLine();
+        sb.AppendLine("## Architecture Connections");
+        if (ai.ProjectArchitecture.Connections.Count == 0) sb.AppendLine("No architecture connections were identified from the available evidence.");
+        else
+        {
+            sb.AppendLine("| From | To | Relationship | Confidence | Evidence |");
+            sb.AppendLine("|---|---|---|---|---|");
+            foreach (var x in ai.ProjectArchitecture.Connections)
+                sb.AppendLine($"| {Cell(x.From)} | {Cell(x.To)} | {Cell(x.Relationship)} | {Cell(x.Confidence)} | {Cell(x.Evidence)} |");
+        }
+        sb.AppendLine();
+        sb.AppendLine("## Architecture Flow");
+        if (ai.ProjectArchitecture.FlowSummary.Count == 0) sb.AppendLine("- Insufficient evidence to build a reliable end-to-end architecture flow.");
+        else foreach (var x in ai.ProjectArchitecture.FlowSummary) sb.AppendLine("- " + Safe(x));
+        sb.AppendLine();
+        sb.AppendLine("## Architecture Notes");
+        if (ai.ProjectArchitecture.Notes.Count == 0) sb.AppendLine("- No additional architecture notes.");
+        else foreach (var x in ai.ProjectArchitecture.Notes) sb.AppendLine("- " + Safe(x));
+        sb.AppendLine();
+
         var i = 1;
         foreach (var p in ai.Projects)
         {
@@ -131,7 +170,7 @@ body{font-family:Segoe UI,Arial,sans-serif;margin:32px;color:#202124;line-height
 h1{color:#17365d;margin-bottom:4px}h2{color:#2f5597;border-bottom:1px solid #d9e2f3;padding-bottom:6px;margin-top:26px}h3{color:#17365d;margin-top:22px}
 .summary{background:#f5f8fc;border-left:5px solid #2f5597;padding:14px 18px;border-radius:5px}.project{margin-top:34px;padding-top:8px;border-top:3px solid #2f5597}
 table{border-collapse:collapse;width:100%;margin:10px 0 18px 0;font-size:14px}th{background:#d9eaf7;text-align:left}th,td{border:1px solid #cfd7e3;padding:8px;vertical-align:top}tr:nth-child(even){background:#fafbfd}
-.muted{color:#667085}.footer{margin-top:32px;color:#777;font-size:12px}
+.muted{color:#667085}.footer{margin-top:32px;color:#777;font-size:12px}.architecture-diagram-wrap{margin:18px 0 10px;padding:18px;background:linear-gradient(180deg,#f8fbff,#fff);border:1px solid #dbe7f4;border-radius:14px;overflow:auto}.architecture-diagram{width:100%;min-width:820px;height:auto}.node-title{font:600 13px 'Segoe UI',Arial,sans-serif;fill:#0f172a}.node-subtitle{font:11px 'Segoe UI',Arial,sans-serif;fill:#475569}.node-kind{font:10px 'Segoe UI',Arial,sans-serif;fill:#64748b}.edge-label{font:10px 'Segoe UI',Arial,sans-serif;fill:#475569}.diagram-legend{display:flex;flex-wrap:wrap;gap:14px;align-items:center;font-size:12px;color:#475569;margin:8px 0 20px}.legend-dot{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}.legend-dot.project{background:#2563eb}.legend-dot.entry{background:#16a34a}.legend-dot.data{background:#ea580c}.legend-dot.messaging{background:#d97706}.legend-dot.external{background:#9333ea}.legend-dot.telemetry{background:#64748b}.legend-line{display:inline-block;width:28px;height:0;border-top:2px solid #64748b;margin-right:4px}.legend-line.dashed{border-top-style:dashed}.diagram-empty{padding:16px;background:#f8fafc;border:1px dashed #cbd5e1;border-radius:10px;color:#64748b}
 </style></head><body>
 """);
         sb.Append($"<h1>{H(ai.ReportTitle)}</h1><div class='muted'>Generated {DateTime.Now:yyyy-MM-dd HH:mm:ss}</div>");
@@ -149,6 +188,22 @@ table{border-collapse:collapse;width:100%;margin:10px 0 18px 0;font-size:14px}th
             sb.Append($"<tr><td>{H(p.ProjectName)}</td><td>{H(p.TargetFramework)}</td><td>{up}</td><td>{down}</td><td>{other}</td></tr>");
         }
         sb.Append("</table>");
+
+        sb.Append("<h1>Project Architecture</h1>");
+        sb.Append($"<p><strong>Architecture Style:</strong> {H(ai.ProjectArchitecture.ArchitectureStyle)}</p>");
+        sb.Append($"<div class='summary'>{H(ai.ProjectArchitecture.Overview)}</div>");
+        sb.Append("<h2>Architecture Diagram</h2>");
+        sb.Append(ArchitectureDiagramBuilder.BuildHtmlSvg(ai, report));
+        sb.Append("<h2>Architecture Components</h2>");
+        if (ai.ProjectArchitecture.Components.Count == 0) sb.Append("<p>No architecture components were identified from the available evidence.</p>");
+        else { sb.Append("<table><tr><th>Component</th><th>Type</th><th>Responsibility</th><th>Confidence</th><th>Evidence</th></tr>"); foreach(var x in ai.ProjectArchitecture.Components) sb.Append($"<tr><td>{H(x.Name)}</td><td>{H(x.Type)}</td><td>{H(x.Responsibility)}</td><td>{H(x.Confidence)}</td><td>{H(x.Evidence)}</td></tr>"); sb.Append("</table>"); }
+        sb.Append("<h2>Architecture Connections</h2>");
+        if (ai.ProjectArchitecture.Connections.Count == 0) sb.Append("<p>No architecture connections were identified from the available evidence.</p>");
+        else { sb.Append("<table><tr><th>From</th><th>To</th><th>Relationship</th><th>Confidence</th><th>Evidence</th></tr>"); foreach(var x in ai.ProjectArchitecture.Connections) sb.Append($"<tr><td>{H(x.From)}</td><td>{H(x.To)}</td><td>{H(x.Relationship)}</td><td>{H(x.Confidence)}</td><td>{H(x.Evidence)}</td></tr>"); sb.Append("</table>"); }
+        sb.Append("<h2>Architecture Flow</h2><ul>");
+        if (ai.ProjectArchitecture.FlowSummary.Count == 0) sb.Append("<li>Insufficient evidence to build a reliable end-to-end architecture flow.</li>"); else foreach(var x in ai.ProjectArchitecture.FlowSummary) sb.Append($"<li>{H(x)}</li>"); sb.Append("</ul>");
+        sb.Append("<h2>Architecture Notes</h2><ul>");
+        if (ai.ProjectArchitecture.Notes.Count == 0) sb.Append("<li>No additional architecture notes.</li>"); else foreach(var x in ai.ProjectArchitecture.Notes) sb.Append($"<li>{H(x)}</li>"); sb.Append("</ul>");
 
         var index = 1;
         foreach (var p in ai.Projects)

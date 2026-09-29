@@ -11,13 +11,16 @@ public partial class MainWindow : Window
 {
     private readonly DependencyAnalyzer _analyzer = new();
     private readonly GeminiService _gemini = new();
+    private readonly AppSettings _settings;
     private CancellationTokenSource? _cts;
     private AnalysisResult? _lastResult;
 
     public MainWindow()
     {
         InitializeComponent();
+        _settings = AppSettings.Load();
         InputTextBox.Text = "";
+        InitializeGeminiModels();
         ResetAiReport("Run an analysis to generate the structured AI impact report.");
 
 
@@ -27,6 +30,38 @@ public partial class MainWindow : Window
             ProgressText.Text = m;
         });
         _analyzer.Log += m => Dispatcher.Invoke(() => AppendLog(m));
+    }
+
+    private void InitializeGeminiModels()
+    {
+        // Stable text-generation models suitable for this structured dependency/architecture report.
+        var models = new[]
+        {
+            "gemini-3.8-flash",
+            "gemini-3.7-flash",
+            "gemini-3.6-flash",
+            "gemini-3.5-flash",
+            "gemini-3.5-flash-lite",
+            "gemini-3.1-flash-lite",
+            "gemini-2.5-flash",
+            "gemini-2.5-flash-lite",
+            "gemini-2.5-pro"
+        };
+
+        GeminiModelComboBox.ItemsSource = models;
+
+        var configuredModel = string.IsNullOrWhiteSpace(_settings.Gemini.Model)
+            ? "gemini-3.5-flash"
+            : _settings.Gemini.Model.Trim();
+
+        GeminiModelComboBox.SelectedItem = models.FirstOrDefault(x =>
+            string.Equals(x, configuredModel, StringComparison.OrdinalIgnoreCase));
+
+        if (GeminiModelComboBox.SelectedItem is null)
+        {
+            GeminiModelComboBox.ItemsSource = models.Append(configuredModel).ToArray();
+            GeminiModelComboBox.SelectedItem = configuredModel;
+        }
     }
 
     private void InputModeChanged(object sender, RoutedEventArgs e)
@@ -49,8 +84,10 @@ public partial class MainWindow : Window
 
     private async void Analyze_Click(object sender, RoutedEventArgs e)
     {
-        string key = "";
-        string model = "gemini-3.5-flash";
+        string key = _settings.Gemini.ApiKey?.Trim() ?? string.Empty;
+        string model = GeminiModelComboBox.SelectedItem?.ToString()?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(model))
+            model = string.IsNullOrWhiteSpace(_settings.Gemini.Model) ? "gemini-3.5-flash" : _settings.Gemini.Model.Trim();
         var input = InputTextBox.Text.Trim();
         if (string.IsNullOrWhiteSpace(input))
         {
@@ -81,12 +118,18 @@ public partial class MainWindow : Window
 
             if (RunAiCheckBox.IsChecked == true)
             {
+                if (string.IsNullOrWhiteSpace(key) || key == "PASTE_YOUR_GEMINI_API_KEY_HERE")
+                {
+                    throw new InvalidOperationException(
+                        "Gemini API key is missing. Add it under Gemini:ApiKey in appsettings.json " +
+                        "or set the GEMINI_API_KEY environment variable.");
+                }
                 ProgressBar.Value = 85;
-                ProgressText.Text = "Generating structured Gemini AI impact report";
+                ProgressText.Text = $"Generating AI report with {model}";
+                AppendLog("Selected Gemini model: " + model);
 
                 try
                 {
-                     
                     var aiReport = await _gemini.AnalyzeAsync(
                         _lastResult.Report,
                         key,
@@ -99,19 +142,23 @@ public partial class MainWindow : Window
                     // Also save portable report formats to the output folder.
                     var markdown = AiReportFormatter.ToMarkdown(aiReport, _lastResult.Report);
                     var html = AiReportFormatter.ToHtml(aiReport, _lastResult.Report);
+                    var architectureSvg = ArchitectureDiagramBuilder.BuildStandaloneSvg(aiReport, _lastResult.Report);
                     var structuredJson = JsonSerializer.Serialize(aiReport, jsonOptions);
 
                     _lastResult.AiAnalysis = markdown;
                     _lastResult.AiReportPath = Path.Combine(_lastResult.OutputDirectory, "ai_dependency_analysis.md");
                     var htmlPath = Path.Combine(_lastResult.OutputDirectory, "ai_dependency_analysis.html");
+                    var svgPath = Path.Combine(_lastResult.OutputDirectory, "project_architecture_diagram.svg");
                     var jsonPath = Path.Combine(_lastResult.OutputDirectory, "ai_dependency_analysis.json");
 
                     await File.WriteAllTextAsync(_lastResult.AiReportPath, markdown, _cts.Token);
                     await File.WriteAllTextAsync(htmlPath, html, _cts.Token);
+                    await File.WriteAllTextAsync(svgPath, architectureSvg, _cts.Token);
                     await File.WriteAllTextAsync(jsonPath, structuredJson, _cts.Token);
 
                     AppendLog("Structured AI analysis saved: " + _lastResult.AiReportPath);
                     AppendLog("Readable HTML report saved: " + htmlPath);
+                    AppendLog("Architecture diagram SVG saved: " + svgPath);
                     AppendLog("Structured AI JSON saved: " + jsonPath);
                 }
                 catch (Exception aiEx)

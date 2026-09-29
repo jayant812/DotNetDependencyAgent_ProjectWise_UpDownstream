@@ -35,7 +35,10 @@ IMPORTANT RULES:
 3. ProjectReference relationships marked Confirmed are authoritative.
 4. Package/source heuristics marked Possible are not facts. Keep their confidence as Possible/Low unless stronger source evidence exists.
 5. The repository contains these projects: {{projectList}}
-6. YOU MUST RETURN ONE SEPARATE PROJECT OBJECT FOR EVERY PROJECT ABOVE. Do not combine projects into one dependency list.
+6. Create a repository-level project_architecture using ONLY supplied evidence. Show discovered .csproj projects as architecture components and confirmed ProjectReference links as connections. You may also include clearly evidenced API, database, queue, cache, storage, scheduler, authentication, telemetry, or external-service components. Never invent a layer or connection.
+7. Architecture connections must preserve direction. A ProjectReference from A to B means A -> B with relationship ProjectReference and Confirmed confidence.
+8. Architecture flow_summary should be a short ordered description such as Entry/API -> Business/Service -> Data/Repository -> External system ONLY when the evidence supports those stages.
+9. YOU MUST RETURN ONE SEPARATE PROJECT OBJECT FOR EVERY PROJECT ABOVE. Do not combine projects into one dependency list.
 7. For each project, list its own upstream, downstream, possible/bidirectional dependencies, entry points, flow, risks and recommendations.
 8. If Project A references Project B, then B is Downstream for A and A is Upstream for B.
 9. Remove duplicates inside each project.
@@ -49,6 +52,30 @@ Return exactly this JSON structure:
   "report_title": ".NET Dependency Impact Analysis",
   "executive_summary": "2-5 concise sentences for the repository as a whole.",
   "overall_assessment": "One short repository-level assessment.",
+  "project_architecture": {
+    "architecture_style": "Evidence-based style such as Layered / Modular / Service-oriented / Unknown",
+    "overview": "Concise repository architecture description based only on evidence.",
+    "components": [
+      {
+        "name": "project/component/system",
+        "type": "Project / API / Service / Data / Database / Queue / Cache / Storage / External / Other",
+        "responsibility": "short responsibility inferred from evidence",
+        "evidence": "short evidence from report",
+        "confidence": "Confirmed / High / Possible / Low"
+      }
+    ],
+    "connections": [
+      {
+        "from": "source component",
+        "to": "target component",
+        "relationship": "ProjectReference / Calls / Reads-Writes / Publishes / Consumes / Uses / Other",
+        "confidence": "Confirmed / High / Possible / Low",
+        "evidence": "short evidence from report"
+      }
+    ],
+    "flow_summary": ["ordered architecture flow step"],
+    "notes": ["architecture uncertainty or limitation"]
+  },
   "projects": [
     {
       "project_name": "EXACT project name from the dependency report",
@@ -195,6 +222,13 @@ DEPENDENCY REPORT:
         report.ReportTitle = EmptyTo(report.ReportTitle, ".NET Dependency Impact Analysis");
         report.ExecutiveSummary = EmptyTo(report.ExecutiveSummary, "No executive summary was returned.");
         report.OverallAssessment = EmptyTo(report.OverallAssessment, "No overall assessment was returned.");
+        report.ProjectArchitecture ??= new AiProjectArchitecture();
+        report.ProjectArchitecture.ArchitectureStyle = EmptyTo(report.ProjectArchitecture.ArchitectureStyle, "Unknown");
+        report.ProjectArchitecture.Overview = EmptyTo(report.ProjectArchitecture.Overview, "Architecture could not be confidently inferred from the available evidence.");
+        report.ProjectArchitecture.Components ??= [];
+        report.ProjectArchitecture.Connections ??= [];
+        report.ProjectArchitecture.FlowSummary ??= [];
+        report.ProjectArchitecture.Notes ??= [];
         report.Projects ??= [];
         report.GlobalRecommendations ??= [];
         report.AnalysisNotes ??= [];
@@ -218,6 +252,8 @@ DEPENDENCY REPORT:
     // Confirmed ProjectReference relationships are injected from deterministic static analysis.
     private static void EnsureStaticProjectCoverage(AiArchitectureReport ai, DependencyReport report)
     {
+        EnsureStaticArchitectureCoverage(ai, report);
+
         foreach (var p in report.Projects)
         {
             var section = ai.Projects.FirstOrDefault(x =>
@@ -276,6 +312,54 @@ DEPENDENCY REPORT:
         ai.Projects = report.Projects
             .Select(p => ai.Projects.First(x => x.ProjectName.Equals(p.ProjectName, StringComparison.OrdinalIgnoreCase)))
             .ToList();
+    }
+
+    private static void EnsureStaticArchitectureCoverage(AiArchitectureReport ai, DependencyReport report)
+    {
+        ai.ProjectArchitecture ??= new AiProjectArchitecture();
+        ai.ProjectArchitecture.Components ??= [];
+        ai.ProjectArchitecture.Connections ??= [];
+        ai.ProjectArchitecture.FlowSummary ??= [];
+        ai.ProjectArchitecture.Notes ??= [];
+
+        foreach (var p in report.Projects)
+        {
+            if (!ai.ProjectArchitecture.Components.Any(x => x.Name.Equals(p.ProjectName, StringComparison.OrdinalIgnoreCase)))
+            {
+                ai.ProjectArchitecture.Components.Add(new AiArchitectureComponent
+                {
+                    Name = p.ProjectName,
+                    Type = "Project",
+                    Responsibility = "Discovered .NET project in the analyzed repository.",
+                    Evidence = string.IsNullOrWhiteSpace(p.TargetFramework) ? "Discovered .csproj" : $"Discovered .csproj targeting {p.TargetFramework}",
+                    Confidence = "Confirmed"
+                });
+            }
+        }
+
+        foreach (var dep in report.ProjectDependencies.Where(x => x.Direction.Equals("Downstream", StringComparison.OrdinalIgnoreCase)))
+        {
+            if (!ai.ProjectArchitecture.Connections.Any(x =>
+                x.From.Equals(dep.Project, StringComparison.OrdinalIgnoreCase) &&
+                x.To.Equals(dep.RelatedProject, StringComparison.OrdinalIgnoreCase) &&
+                x.Relationship.Equals("ProjectReference", StringComparison.OrdinalIgnoreCase)))
+            {
+                ai.ProjectArchitecture.Connections.Add(new AiArchitectureConnection
+                {
+                    From = dep.Project,
+                    To = dep.RelatedProject,
+                    Relationship = "ProjectReference",
+                    Confidence = dep.Confidence,
+                    Evidence = dep.Relationship
+                });
+            }
+        }
+
+        ai.ProjectArchitecture.Components = ai.ProjectArchitecture.Components
+            .GroupBy(x => x.Name, StringComparer.OrdinalIgnoreCase).Select(x => x.First()).OrderBy(x => x.Name).ToList();
+        ai.ProjectArchitecture.Connections = ai.ProjectArchitecture.Connections
+            .GroupBy(x => $"{x.From}|{x.To}|{x.Relationship}", StringComparer.OrdinalIgnoreCase).Select(x => x.First())
+            .OrderBy(x => x.From).ThenBy(x => x.To).ToList();
     }
 
     private static void AddStaticDependency(List<AiDependencyItem> items, string name, string type, string direction,

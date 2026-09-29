@@ -64,6 +64,35 @@ public static class AiReportRenderer
         AddTable(doc, ["Project", "Target Framework", "Confirmed Upstream", "Confirmed Downstream", "Other Detected"], overviewRows,
             [2.2, 1.5, 1.2, 1.2, 1.2]);
 
+        AddHeading(doc, "Project Architecture");
+        doc.Blocks.Add(new Paragraph(new Run($"Architecture style: {ai.ProjectArchitecture.ArchitectureStyle}"))
+        {
+            FontWeight = FontWeights.SemiBold,
+            Foreground = HeadingBrush,
+            Margin = new Thickness(0, 2, 0, 6)
+        });
+        doc.Blocks.Add(Text(ai.ProjectArchitecture.Overview));
+        doc.Blocks.Add(ArchitectureDiagramBuilder.BuildWpfDiagram(ai, report));
+
+        AddSubHeading(doc, "Architecture Components");
+        if (ai.ProjectArchitecture.Components.Count == 0) AddEmpty(doc, "No architecture components were identified from the available evidence.");
+        else AddTable(doc,
+            ["Component", "Type", "Responsibility", "Confidence", "Evidence"],
+            ai.ProjectArchitecture.Components.Select(x => new[] { x.Name, x.Type, x.Responsibility, x.Confidence, x.Evidence }).ToList(),
+            [1.6, 1.0, 2.8, 1.0, 2.6]);
+
+        AddSubHeading(doc, "Architecture Connections");
+        if (ai.ProjectArchitecture.Connections.Count == 0) AddEmpty(doc, "No architecture connections were identified from the available evidence.");
+        else AddTable(doc,
+            ["From", "To", "Relationship", "Confidence", "Evidence"],
+            ai.ProjectArchitecture.Connections.Select(x => new[] { x.From, x.To, x.Relationship, x.Confidence, x.Evidence }).ToList(),
+            [1.6, 1.6, 1.5, 1.0, 2.8]);
+
+        AddSubHeading(doc, "Architecture Flow");
+        AddNotes(doc, ai.ProjectArchitecture.FlowSummary, "Insufficient evidence to build a reliable end-to-end architecture flow.");
+        AddSubHeading(doc, "Architecture Notes");
+        AddNotes(doc, ai.ProjectArchitecture.Notes, "No additional architecture notes.");
+
         var index = 1;
         foreach (var project in ai.Projects)
         {
